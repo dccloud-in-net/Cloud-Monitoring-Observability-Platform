@@ -1,0 +1,136 @@
+fullnameOverride: kps
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false
+    configReloaders: true
+    general: true
+    k8s: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubeApiserverSlos: true
+    kubelet: true
+    kubeProxy: false
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubernetesSystem: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    retentionSize: "8GB"
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    enableRemoteWriteReceiver: true
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits:   { cpu: "1",  memory: 2Gi }
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    additionalScrapeConfigs:
+      - job_name: 'otel-collector'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [opentelemetry]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: keep
+            regex: opentelemetry-collector
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits:   { cpu: 200m, memory: 256Mi }
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname','namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      receiver: 'default'
+      routes:
+        - matchers: [ 'severity="critical"' ]
+          receiver: 'critical'
+    receivers:
+      - name: 'default'
+      - name: 'critical'
+        # Wire your webhook / Teams / Slack / PagerDuty here.
+        webhook_configs: []
+
+grafana:
+  adminPassword: "ChangeMe-Strong-Password!"
+  defaultDashboardsTimezone: browser
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: true
+    size: 5Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.observability.svc:3100
+      jsonData:
+        maxLines: 1000
+    - name: Tempo
+      type: tempo
+      access: proxy
+      url: http://tempo.observability.svc:3100
+      jsonData:
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: -1h
+          spanEndTimeShift: 1h
+        tracesToMetrics:
+          datasourceUid: prometheus
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+prometheusOperator:
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }

@@ -1,0 +1,65 @@
+{
+  "title": "OpenTelemetry Pipeline Health",
+  "uid": "otel-pipeline",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["opentelemetry", "observability"],
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Collector replicas up",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(up{job=\"otel-collector\"})", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Spans accepted /s",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(rate(otelcol_receiver_accepted_spans_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Metric points accepted /s",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(rate(otelcol_receiver_accepted_metric_points_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Log records accepted /s",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(rate(otelcol_receiver_accepted_log_records_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exporter queue size (per exporter)",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum by (exporter) (otelcol_exporter_queue_size)",
+        "legendFormat": "{{exporter}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exporter failures /s",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [{
+        "expr": "sum by (exporter) (rate(otelcol_exporter_send_failed_spans_total[5m]) + rate(otelcol_exporter_send_failed_metric_points_total[5m]) + rate(otelcol_exporter_send_failed_log_records_total[5m]))",
+        "legendFormat": "{{exporter}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Processor: dropped spans /s",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [{
+        "expr": "sum by (processor) (rate(otelcol_processor_dropped_spans_total[5m]))",
+        "legendFormat": "{{processor}}",
+        "refId": "A"
+      }]
+    }
+  ]
+}

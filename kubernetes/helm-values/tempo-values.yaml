@@ -1,0 +1,28 @@
+tempo:
+  retention: 168h
+  storage:
+    trace:
+      backend: local
+      local:
+        path: /var/tempo/traces
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: http://kps-prometheus.observability.svc:9090/api/v1/write
+
+persistence:
+  enabled: true
+  size: 20Gi
+
+service:
+  type: ClusterIP
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits:   { cpu: 500m, memory: 1Gi }

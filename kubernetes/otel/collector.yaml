@@ -1,0 +1,181 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: opentelemetry
+spec:
+  mode: deployment
+  replicas: 2
+  image: otel/opentelemetry-collector-contrib:0.103.0
+  serviceAccount: otel-collector
+  ports:
+    - name: prom-self
+      port: 8888
+      protocol: TCP
+  resources:
+    requests:
+      cpu: 200m
+      memory: 400Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  env:
+    - name: AZURE_MONITOR_CONNECTION_STRING
+      valueFrom:
+        secretKeyRef:
+          name: azure-monitor
+          key: connection-string
+          optional: true
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      hostmetrics:
+        collection_interval: 30s
+        scrapers:
+          cpu: {}
+          memory: {}
+          load: {}
+          disk: {}
+          filesystem: {}
+          network: {}
+      k8s_cluster:
+        collection_interval: 30s
+        node_conditions_to_report: [Ready, MemoryPressure, DiskPressure]
+        allocatable_types_to_report: [cpu, memory, ephemeral-storage]
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: otel-collector-self
+              scrape_interval: 30s
+              static_configs:
+                - targets: ['0.0.0.0:8888']
+    processors:
+      batch:
+        send_batch_size: 8192
+        timeout: 10s
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      k8sattributes:
+        auth_type: serviceAccount
+        passthrough: false
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.deployment.name
+            - k8s.node.name
+            - k8s.container.name
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.ip
+          - sources:
+              - from: resource_attribute
+                name: k8s.pod.uid
+          - sources:
+              - from: connection
+      resource:
+        attributes:
+          - key: deployment.environment
+            value: dev
+            action: upsert
+          - key: service.namespace
+            from_attribute: k8s.namespace.name
+            action: insert
+      transform/traces:
+        trace_statements:
+          - context: span
+            statements:
+              - set(attributes["span.kind"], SpanKind)
+    exporters:
+      prometheusremotewrite:
+        endpoint: http://kps-prometheus.observability.svc:9090/api/v1/write
+        resource_to_telemetry_conversion:
+          enabled: true
+        send_metadata: true
+      otlp/tempo:
+        endpoint: tempo.observability.svc:4317
+        tls:
+          insecure: true
+      loki:
+        endpoint: http://loki.observability.svc:3100/loki/api/v1/push
+        default_labels_enabled:
+          exporter: false
+          job: true
+          level: true
+      azuremonitor:
+        connection_string: ${env:AZURE_MONITOR_CONNECTION_STRING}
+        maxbatchsize: 100
+        maxbatchinterval: 10s
+      debug:
+        verbosity: basic
+    extensions:
+      health_check: {}
+      zpages: {}
+    service:
+      extensions: [health_check, zpages]
+      telemetry:
+        metrics:
+          address: 0.0.0.0:8888
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, resource, transform/traces, batch]
+          exporters: [otlp/tempo, azuremonitor]
+        metrics:
+          receivers: [otlp, hostmetrics, k8s_cluster, prometheus]
+          processors: [memory_limiter, k8sattributes, resource, batch]
+          exporters: [prometheusremotewrite, azuremonitor]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, resource, batch]
+          exporters: [loki, azuremonitor]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: opentelemetry
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes", "nodes/proxy", "services", "endpoints", "replicationcontrollers", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "daemonsets", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector
+    namespace: opentelemetry

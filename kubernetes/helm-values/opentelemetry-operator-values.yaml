@@ -1,0 +1,13 @@
+manager:
+  collectorImage:
+    repository: otel/opentelemetry-collector-contrib
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+
+admissionWebhooks:
+  certManager:
+    enabled: false
+  autoGenerateCert:
+    enabled: true
+    recreate: false

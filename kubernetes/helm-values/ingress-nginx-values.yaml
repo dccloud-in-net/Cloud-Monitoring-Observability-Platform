@@ -1,0 +1,29 @@
+controller:
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kps
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  config:
+    enable-real-ip: "true"
+    use-forwarded-headers: "true"
+    log-format-escape-json: "true"
+    log-format-upstream: '{"time":"$time_iso8601","remote_addr":"$remote_addr","request":"$request","status":$status,"upstream_response_time":"$upstream_response_time","trace_id":"$req_id"}'
