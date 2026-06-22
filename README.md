@@ -57,8 +57,6 @@ Managing and debugging distributed microservice architectures on Kubernetes with
                                         └────────────────────────────────┘
 ```
 
-*For a deep dive into data flow and component configuration, see [docs/architecture.md](docs/architecture.md).*
-
 ---
 
 ## 📁 Repository Structure
@@ -88,8 +86,7 @@ Managing and debugging distributed microservice architectures on Kubernetes with
 ├── scripts/                             # Utility Scripts
 │   └── port_forward.py                  # CLI utility for local dashboard port-forwarding
 ├── .github/workflows/                   # GitHub Actions Workflows (CI/CD)
-├── .config/                             # Linter & formatter configurations
-└── docs/                                # Technical Documentation & Runbooks
+└── .config/                             # Linter & formatter configurations
 ```
 
 ---
@@ -163,10 +160,4 @@ Once running, the following endpoints will be available locally:
 * **Telemetry Pipeline**: `OTelCollectorDown`, `OTelExporterQueueSaturated`.
 * **SRE SLO Rules**: Google SRE-style multi-window multi-burn-rate alerts (`SLOErrorBudgetBurnFast`, `SLOErrorBudgetBurnSlow`).
 
----
 
-## 📖 Further Reading
-
-* [docs/architecture.md](docs/architecture.md) — Detailed components and data-flow explanation.
-* [docs/runbooks.md](docs/runbooks.md) — Operator runbooks for resolving active alerts.
-* [docs/onboarding.md](docs/onboarding.md) — Workload onboarding guides and platform extension.
