@@ -25,12 +25,6 @@ A centralized, production-grade observability platform delivering deep operation
 ### 🔍 Challenge & Context
 Managing and debugging distributed microservice architectures on Kubernetes without unified telemetry leads to blind spots, high Mean Time to Resolution (MTTR), and reactive operations. This platform was built to solve these issues by providing a single pane of glass for metrics, logs, and traces with standard OpenTelemetry instrumentation.
 
-### 🛠️ My Role & Scope
-* **Unified Infrastructure as Code**: Codified the entire Azure landing zone and in-cluster observability stack with Terraform, utilizing the Helm, Kubernetes, and Kubectl providers to avoid local bootstrapping scripts.
-* **OpenTelemetry Instrumentation**: Instrumented application workloads to auto-collect OTel metrics and distributed traces, establishing end-to-end context propagation.
-* **Telemetry Collection & Sinks**: Configured Prometheus remote-write capabilities to store metrics in Azure Monitor for long-term retention.
-* **Grafana Visualization & Alerts**: Designed operational dashboards for Kubernetes resources and SLOs, and set up Alertmanager-routed SRE alerts based on Golden Signals and error budget burn rates.
-
 ### 💡 Business Value Delivered
 * **Complete System Visibility**: Unified view across infrastructure health, OTel pipelines, and business workloads.
 * **Drill-down Troubleshooting**: Traces, logs, and metrics are fully correlated in Grafana, enabling rapid root-cause analysis.
